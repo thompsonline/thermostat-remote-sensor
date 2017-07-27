@@ -4,7 +4,7 @@
 
 #define WLAN_SSID "<SSID>"
 #define WLAN_PASS "<PASS>"
-
+#define LOGGING_SERVER "192.168.1.10"
 
 BME280 mySensor;
 
@@ -84,7 +84,7 @@ void loop() {
   digitalWrite(statusLEDPin, lastLEDStatus);
   packetNum += 1;
 
-  if (client.connect({192, 168, 1, 10}, 80)) {
+  if (client.connect(LOGGING_SERVER, 80)) {
     client.print("GET /remotesensor/savesensor.php?loc=basement&temp=");
     client.print(tempF);
     client.print("&humid=");
@@ -117,3 +117,28 @@ void printWiFiStatus() {
   Serial.print(rssi);
   Serial.println(" dBm");
 }
+
+void logStartupEvent() {
+  WiFiClient client;
+
+  if (client.connect(LOGGING_SERVER, 80)) {
+    Serial.println("Logging reboot");
+    client.print("GET /eventlogger/eventlogger.php?t=boot&d=");
+    client.print(moduleID);
+    client.println("&i=sensor%20startup HTTP/1.1");
+    client.print("Host: ");
+    client.println(LOGGING_SERVER);
+    client.println("Connection: close");
+    client.println();
+
+    while (client.available()) {
+      char c = client.read();
+      Serial.write(c);
+    }
+    if (!client.connected()) {
+      Serial.println();
+      client.stop();
+    }
+  }
+}
+
